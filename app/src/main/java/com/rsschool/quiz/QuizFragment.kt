@@ -1,160 +1,173 @@
 package com.rsschool.quiz
 
-import android.R
-import android.animation.ObjectAnimator
-import android.content.Context
-import android.graphics.Color
 import android.os.Bundle
 import android.util.TypedValue
+import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
+import androidx.core.content.res.ResourcesCompat
 import androidx.core.os.bundleOf
-import androidx.fragment.app.Fragment
 import com.rsschool.quiz.databinding.FragmentQuizBinding
 
+// TODO: Rename parameter arguments, choose names that match
+// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
+private const val ARG_NUM = "num"
+private const val ARG_ANSWERS = "questions"
+
+/**
+ * A simple [Fragment] subclass.
+ * Use the [QuizFragment.newInstance] factory method to
+ * create an instance of this fragment.
+ */
 class QuizFragment : Fragment() {
 
-    private var launcher: Launcher? = null
+    private var qNum: Int = 1
+    private var answers: MutableList<Int> = mutableListOf()
+    private var themeId = 0
+    private var binding: FragmentQuizBinding? = null
 
-    private var _binding: FragmentQuizBinding? = null
-    private val binding get() = _binding!!
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        arguments?.let {
+            qNum = it.getInt(ARG_NUM)
+            answers = it.get(ARG_ANSWERS) as MutableList<Int>
+        }
 
-    override fun onCreateView(
-            inflater: LayoutInflater,
-            container: ViewGroup?,
-            savedInstanceState: Bundle?
-    ): View {
-        _binding = FragmentQuizBinding.inflate(inflater, container, false)
-        return binding.root
+        when (qNum) {
+            1 -> themeId = R.style.Theme_Quiz_First
+            2 -> themeId = R.style.Theme_Quiz_Second
+            3 -> themeId = R.style.Theme_Quiz_Third
+            4 -> themeId = R.style.Theme_Quiz_Fourth
+            5 -> themeId = R.style.Theme_Quiz_Fifth
+            else -> themeId = R.style.Theme_Quiz_First // default theme is first
+        }
     }
 
     override fun onDestroyView() {
+        binding = null
         super.onDestroyView()
-        _binding = null
     }
 
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        launcher = context as Launcher
-    }
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
 
-    private fun setDataToFragment(questionNumber: Int, answers: MutableList<Int>) {
-        // Установка цвета статус-бара в зависимости от темы
-        val typedValue = TypedValue()
-        context?.theme?.resolveAttribute(R.attr.colorPrimaryDark, typedValue, true)
-        ObjectAnimator.ofArgb(activity?.window, "statusBarColor", activity?.window?.statusBarColor!!, typedValue.data).start()
+        val value = TypedValue ()
+        activity?.setTheme(themeId)
+        activity?.getTheme()?.resolveAttribute(android.R.attr.statusBarColor, value, true)
+        activity?.window?.statusBarColor = value.data
 
-        // Отображение вопроса, вариантов ответа и кнопок
-        binding.toolbar.title = "Question $questionNumber"
-        if (questionNumber == 1) {
-            binding.toolbar.navigationIcon = null
-            binding.previousButton.isEnabled = false
-        } else if (questionNumber == Database.questions.size) {
-            binding.nextButton.text = "Submit"
-        }
+        binding = FragmentQuizBinding.inflate(inflater, container, false)
 
-        binding.question.text = Database.questions[questionNumber - 1].question
-        binding.optionOne.text = Database.questions[questionNumber - 1].answerOptions[0].first
-        binding.optionTwo.text = Database.questions[questionNumber - 1].answerOptions[1].first
-        binding.optionThree.text = Database.questions[questionNumber - 1].answerOptions[2].first
-        binding.optionFour.text = Database.questions[questionNumber - 1].answerOptions[3].first
-        binding.optionFive.text = Database.questions[questionNumber - 1].answerOptions[4].first
+        binding?.previousButton?.setBackgroundColor(value.data)
+        binding?.nextButton?.setBackgroundColor(value.data)
 
-        when (answers[questionNumber - 1]) {
-            1 -> binding.optionOne.isChecked = true
-            2 -> binding.optionTwo.isChecked = true
-            3 -> binding.optionThree.isChecked = true
-            4 -> binding.optionFour.isChecked = true
-            5 -> binding.optionFive.isChecked = true
-            else -> binding.nextButton.isEnabled = false
-        }
+        return this.binding!!.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+
         super.onViewCreated(view, savedInstanceState)
 
-        val questionNumber = arguments?.getInt(QUESTION_NUMBER_TAG)!!
-        val answers = arguments?.get(ANSWERS_TAG) as MutableList<Int>
+        if (qNum == 1) {
+            binding?.toolbar?.navigationIcon = null
+            binding?.previousButton?.isEnabled = false
+        } else if (qNum == questions.size) {
+            binding?.nextButton?.text = "Submit"
+        }
+        
+        binding?.toolbar?.title = "Question $qNum"
 
-        setDataToFragment(questionNumber, answers)
+        binding?.question?.text = questions[qNum-1].question
+        binding?.optionOne?.text = questions[qNum-1].answers?.get(0)
+        binding?.optionTwo?.text = questions[qNum-1].answers?.get(1)
+        binding?.optionThree?.text = questions[qNum-1].answers?.get(2)
+        binding?.optionFour?.text = questions[qNum-1].answers?.get(3)
+        binding?.optionFive?.text = questions[qNum-1].answers?.get(4)
 
-        // Обработка нажатия radioButton
-        binding.radioGroup.setOnCheckedChangeListener { _, checkedID ->
-            if (checkedID != -1) {
-                binding.nextButton.isEnabled = true
-                val radioButtonID = resources.getResourceEntryName(binding.radioGroup.checkedRadioButtonId)
-                answers[questionNumber - 1] = when (radioButtonID) {
-                    "option_one" -> 1
-                    "option_two" -> 2
-                    "option_three" -> 3
-                    "option_four" -> 4
-                    "option_five" -> 5
-                    else -> 0
-                }
+        when (answers.get(qNum-1)) {
+            1 -> binding?.optionOne?.isChecked = true
+            2 -> binding?.optionTwo?.isChecked = true
+            3 -> binding?.optionThree?.isChecked = true
+            4 -> binding?.optionFour?.isChecked = true
+            5 -> binding?.optionFive?.isChecked = true
+            else -> binding?.nextButton?.isEnabled = false
+        }
+
+        if (answers.get(qNum-1) != 0) {
+            binding?.nextButton?.isEnabled = (true)
+        } else {
+            binding?.nextButton?.isEnabled = (false)
+        }
+
+        binding?.optionOne?.setOnClickListener {
+            binding?.nextButton?.isEnabled = (true)
+            answers.set(qNum-1, 1)
+        }
+
+        binding?.optionTwo?.setOnClickListener {
+            binding?.nextButton?.isEnabled = (true)
+            answers.set(qNum-1, 2)
+        }
+        binding?.optionThree?.setOnClickListener {
+            binding?.nextButton?.isEnabled = (true)
+            answers.set(qNum-1, 3)
+        }
+        binding?.optionFour?.setOnClickListener {
+            binding?.nextButton?.isEnabled = (true)
+            answers.set(qNum-1, 4)
+        }
+        binding?.optionFive?.setOnClickListener {
+            binding?.nextButton?.isEnabled = (true)
+            answers.set(qNum-1, 5)
+        }
+
+        when (qNum) {
+            1 -> {
+                binding?.previousButton?.isEnabled = false
+                binding?.toolbar?.navigationIcon = null
+            }
+            in 2..4 -> binding?.nextButton?.text = "NEXT"
+            5 -> binding?.nextButton?.text = "SUBMIT"
+        }
+
+        binding?.previousButton?.setOnClickListener {
+            parentFragmentManager.popBackStack()
+        }
+
+        binding?.toolbar?.setNavigationOnClickListener {
+            parentFragmentManager.popBackStack()
+        }
+
+        binding?.nextButton?.setOnClickListener {
+            if (qNum > 0 && qNum < 5) {
+                (activity as MainInterface).openQuiz(qNum+1, answers)
+            }
+            else {
+                (activity as MainInterface).openFinal(answers)
             }
         }
 
-        // Функция, открывающая предыдущий/следующий фрагмент
-        fun openFragment(whichWay: Int) {
-            launcher?.openQuizFragment(questionNumber + whichWay, answers)
-            // Установка темы
-            context?.theme?.applyStyle(Database.questions[questionNumber - 1 + whichWay].theme, true)
-        }
-
-        // Обработка нажатия кнопки "Next"
-        binding.nextButton.setOnClickListener {
-            if (questionNumber != answers.size) {
-                openFragment(NEXT)
-            } else {
-                launcher?.openFinalFragment(answers)
-                ObjectAnimator.ofArgb(activity?.window, "statusBarColor", activity?.window?.statusBarColor!!, Color.WHITE).start()
-            }
-        }
-
-        // Обработка нажатия кнопки "Previous"
-        binding.previousButton.setOnClickListener {
-            openFragment(PREVIOUS)
-        }
-
-        // Обработка нажатия кнопки '<' на Toolbar'е
-        binding.toolbar.setNavigationOnClickListener {
-            openFragment(PREVIOUS)
-        }
-
-        // Обработка нажатия системной кнопки '<'
-        activity?.onBackPressedDispatcher?.addCallback(object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (questionNumber != 1)
-                    openFragment(PREVIOUS)
-                else {
-                    if (backPressed + 2000 > System.currentTimeMillis())
-                        launcher?.closeApp()
-                    else
-                        Toast.makeText(context, "Press once again to exit", Toast.LENGTH_SHORT).show()
-                    backPressed = System.currentTimeMillis()
-                }
-            }
-        })
     }
 
-    private val PREVIOUS = -1
-    private val NEXT = 1
-    private var backPressed: Long = 0
-
-    companion object {
+        companion object {
+        /**
+         * Use this factory method to create a new instance of
+         * this fragment using the provided parameters.
+         *
+         * @param param1 Parameter 1.
+         * @return A new instance of fragment QuizFragment.
+         */
+        // TODO: Rename and change types and number of parameters
         @JvmStatic
-        fun newInstance(questionNumber: Int, answers: MutableList<Int>) =
-                QuizFragment().apply {
-                    arguments = bundleOf(
-                            QUESTION_NUMBER_TAG to questionNumber,
-                            ANSWERS_TAG to answers
-                    )
-                }
-
-        private const val QUESTION_NUMBER_TAG = "questionNumber"
-        private const val ANSWERS_TAG = "answers"
+        fun newInstance(qNum: Int, answers: MutableList<Int>) =
+            QuizFragment().apply {
+                arguments = bundleOf(
+                    ARG_NUM to qNum,
+                    ARG_ANSWERS to answers
+                )
+            }
     }
 }
